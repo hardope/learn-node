@@ -1,70 +1,42 @@
 const express = require('express')
 const {ValidateUser} = require('./validate')
+const Database = require('./storage')
 const app = express();
 
 app.use(express.json())
 
-users = [
-    {id: 1, name: 'James', age: 19},
-    {id: 2, name: 'Jarvis', age: 17},
-    {id: 3, name: 'Friday', age: 18}
-]
+const db = new Database()
 
 app.get('/', (req, res) => {
     return res.send('Hello World!')
 })
 
 app.get('/users', (req, res) => {
-    return res.send(users)
+    return res.send(db.get_all())
 })
 
 app.get('/user/:id', (req, res) => {
-    const user = users.find(user => user.id === parseInt(req.params.id))
-    if(!user) res.status(404).send('The user with the given ID was not found.')
+    const user = db.get_one(req.params.id)
+    if(!user) return res.status(404).send('The user with the given ID was not found.')
     return res.send(user)
 })
 
 app.post('/user', (req, res) => {
-
-    const {error} = ValidateUser(req.body)
-
-    if (error) {
-        return res.status(400).send(error.details[0].message)
-    }
-
-    const user = {
-        id: users.length + 1,
-        name: req.body.name,
-        age: req.body.age
-    }
-
-    users.push(user)
-    return res.send(user)
+    data = db.new(req.body)
+    if (data.error) return res.status(400).send(data.error)
+    return res.send(data)
 })
 
 app.put('/user/:id', (req, res) => {
-    const user = users.find(user => user.id === parseInt(req.params.id))
+    const user = db.update(req.params.id, req.body)
     if(!user) res.status(404).send('The user with the given ID was not found.')
-
-    const {error}= ValidateUser(req.body)
-
-    if (error) {
-        return res.status(400).send(error.details[0].message)
-    }
-
-    user.name = req.body.name
-    user.age = req.body.age
-
+    if (user.error) return res.status(400).send(user.error)
     return res.send(user)
 })
 
 app.delete('/user/:id', (req, res) => {
-    const user = users.find(user => user.id === parseInt(req.params.id))
+    const user = db.delete(req.params.id)
     if(!user) res.status(404).send('The user with the given ID was not found.')
-
-    const index = users.indexOf(user)
-    users.splice(index, 1)
-
     return res.send(user)
 })
 
